@@ -1,9 +1,3 @@
-/**
- * Copyright (c) 2021 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include "pio_i2c.h"
 
 const int PIO_I2C_ICOUNT_LSB = 10;
@@ -32,7 +26,7 @@ void pio_i2c_rx_enable(PIO pio, uint sm, bool en) {
 static inline void pio_i2c_put16(PIO pio, uint sm, uint16_t data) {
     while (pio_sm_is_tx_fifo_full(pio, sm))
         ;
-    // some versions of GCC dislike this
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
     *(io_rw_16 *)&pio->txf[sm] = data;
@@ -40,14 +34,13 @@ static inline void pio_i2c_put16(PIO pio, uint sm, uint16_t data) {
 }
 
 
-// If I2C is ok, block and push data. Otherwise fall straight through.
 void pio_i2c_put_or_err(PIO pio, uint sm, uint16_t data) {
     while (pio_sm_is_tx_fifo_full(pio, sm))
         if (pio_i2c_check_error(pio, sm))
             return;
     if (pio_i2c_check_error(pio, sm))
         return;
-    // some versions of GCC dislike this
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
     *(io_rw_16 *)&pio->txf[sm] = data;
@@ -59,16 +52,15 @@ uint8_t pio_i2c_get(PIO pio, uint sm) {
 }
 
 void pio_i2c_start(PIO pio, uint sm) {
-    pio_i2c_put_or_err(pio, sm, 1u << PIO_I2C_ICOUNT_LSB); // Escape code for 2 instruction sequence
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // We are already in idle state, just pull SDA low
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // Also pull clock low so we can present data
-}
+    pio_i2c_put_or_err(pio, sm, 1u << PIO_I2C_ICOUNT_LSB);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);
 
 void pio_i2c_stop(PIO pio, uint sm) {
     pio_i2c_put_or_err(pio, sm, 2u << PIO_I2C_ICOUNT_LSB);
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);    // SDA is unknown; pull it down
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);    // Release clock
-    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD1]);    // Release SDA to return to idle state
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC0_SD0]);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD0]);
+    pio_i2c_put_or_err(pio, sm, set_scl_sda_program_instructions[I2C_SC1_SD1]);
 };
 
 void pio_i2c_repstart(PIO pio, uint sm) {
@@ -114,7 +106,7 @@ int pio_i2c_read_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint l
     while (!pio_sm_is_rx_fifo_empty(pio, sm))
         (void)pio_i2c_get(pio, sm);
     pio_i2c_put16(pio, sm, (addr << 2) | 3u);
-    uint32_t tx_remain = len; // Need to stuff 0xff bytes in to get clocks
+    uint32_t tx_remain = len;
 
     bool first = true;
 
@@ -125,7 +117,7 @@ int pio_i2c_read_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint l
         }
         if (!pio_sm_is_rx_fifo_empty(pio, sm)) {
             if (first) {
-                // Ignore returned address byte
+
                 (void)pio_i2c_get(pio, sm);
                 first = false;
             }
@@ -144,4 +136,3 @@ int pio_i2c_read_blocking(PIO pio, uint sm, uint8_t addr, uint8_t *rxbuf, uint l
     }
     return err;
 }
-
