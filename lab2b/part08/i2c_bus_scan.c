@@ -7,8 +7,8 @@
 #include "hardware/clocks.h"
 
 #include "registers.h"
-#include "adps_registers.h"
-#include "adafruit_qtpy_rp2040.h"
+#include "apds_registers.h"
+#include "hardware/adafruit_qtpy_rp2040.h"
 
 #define PIN_SDA 22
 #define PIN_SCL 23
@@ -19,12 +19,15 @@ bool reserved_addr(uint8_t addr) {
 
 void config_adps(PIO pio, uint sm){
 
+    uint8_t txbuf[2] = {0};
+
+    // Set Color Integration time to `50` => 256 - 50 = 206 = 0xCE
     txbuf[0] = ATIME_REGISTER;
     txbuf[1] = (uint8_t)(0x81);
     pio_i2c_write_blocking(pio, sm, ADPS_ADDRESS, txbuf, 2);
-    
-    txbuf[0] = ADPS_CONTROL_ONE_REGISTER;
 
+    // Config the Cotrol Register.
+    txbuf[0] = ADPS_CONTROL_ONE_REGISTER;
     txbuf[1] = ADPS_CONTROL_ONE_AGAIN;
     pio_i2c_write_blocking(pio, sm, ADPS_ADDRESS, txbuf, 2);
 
@@ -35,7 +38,7 @@ void config_adps(PIO pio, uint sm){
 }
 
 void adps_read(PIO pio, uint sm, uint8_t reg_addr, uint8_t *rxbuf, uint num_bytes) {
-
+    // Read from `reg_addr`.
     pio_i2c_write_blocking(pio, sm, ADPS_ADDRESS, &reg_addr, 1);  
     pio_i2c_read_blocking(pio, sm, ADPS_ADDRESS, rxbuf, num_bytes);
 }
@@ -47,13 +50,11 @@ int main() {
     uint sm = 0;
     uint offset = pio_add_program(pio, &i2c_program);
     i2c_program_init(pio, sm, offset, PIN_SDA, PIN_SCL);
-    
-    // Wait until USB is connected.
-    while(!stdio_usb_connected());
-
+   
     printf("Starting PIO I2C ADPS9960 Interface\n");
     
     // Start I2C commuinication.
+    /* pio_i2c_start(pio, sm); */
 
     // Configure the ADPS Sensor.
     config_adps(pio, sm);
@@ -65,7 +66,6 @@ int main() {
         uint8_t rxbuf[1] = {0};
         adps_read(pio, sm, STATUS_REGISTER, rxbuf, 1);
         adps_read(pio, sm, ID_REGISTER, rxbuf, 1);
-        /* printf("The value in RX Buffer is : 0x%08x\n", rxbuf[0]); */
 
         // Use the mask to check if our Proximity and color data is ready to be read.
         uint8_t data_arr[8] = {0};
