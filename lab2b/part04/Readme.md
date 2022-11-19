@@ -6,6 +6,6 @@
 - The recording of the sequence of BOOT button strokes is stored on the laptop using the Python Serial Library
 - A recording from the laptop is played on the RP2040 
 
+https://user-images.githubusercontent.com/69215958/202835560-3fe23c6a-1424-4718-bca6-6e0afda5b484.mp4
 
-
-  Recorded BOOT presses plays on the Neopixel LED : "_ _ _ ... _"
+  Recorded BOOT presses plays on the Neopixel LED : "_ _ .. _ _ .."
